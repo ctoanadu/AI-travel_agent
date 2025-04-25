@@ -1,6 +1,6 @@
 from typing import Annotated
 from typing_extensions import TypedDict
-from langgraph.graph import StateGraph,END
+from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from langchain_core.messages import AnyMessage, HumanMessage, SystemMessage, ToolMessage, ToolCall
 from langchain_openai import ChatOpenAI
@@ -28,7 +28,7 @@ class Agent():
 
   def handle_conversation_flow(self,state : State):
     messages = state['messages']
-    messages = [SystemMessage(content = self.tools)] + messages
+    messages = [SystemMessage(content = self.system_prompt)] + messages
     message = self.llm.invoke(messages)
     return {'messages': message}
   
@@ -52,8 +52,8 @@ class Agent():
   
 
   
-  def graph_builder(self, state: State):
-    builder=StateGraph(state)
+  def graph_builder(self):
+    builder=StateGraph(State)
     builder.add_node("handle_conversation_flow",self.handle_conversation_flow)
     builder.add_node("tool_executor", self.tool_executor)
     builder.set_entry_point("handle_conversation_flow")
@@ -75,7 +75,8 @@ class Agent():
 def main():
   system_prompt ="You are a smart travel agency, Use the tools to look up information. If you need to look up some information before asking a follow up question, you are allowed to do that! Also default trip is a round trip (1), while one way is 2 and multi-city is 3. DO NOT mention the raw search results or data to the user - instead, analyze the data and provide useful summaries and recommendations based on it."
   agent = Agent(system_prompt=system_prompt)
-  return agent.graph_builder(state = State())
+
+  return agent.graph_builder()
 
 
 
@@ -98,25 +99,3 @@ def main():
   
 
 
-graph_builder=StateGraph(State)
-graph_builder.add_node("chatbot",chatbot)
-graph_builder.add_node("tool_executor", tool_executor)
-
-#graph_builder.add_edge(START,"chatbot")
-graph_builder.set_entry_point("chatbot")
-
-#graph_builder.add_edge("chatbot",END)
-
-# Conditional edge depending on whether LLM calls a tool
-graph_builder.add_conditional_edges(
-    "chatbot",
-    lambda state: "tool_executor" if getattr(state["messages"][-1], "tool_calls", None) else END,
-    {
-        "tool_executor": "tool_executor",
-        END: END
-    }
-)
-
-graph_builder.add_edge("tool_executor", "chatbot")
-
-graph=graph_builder.compile()

@@ -2,7 +2,5 @@ python-dotenv
 langchain
 langchain-openai
 langgraph
-grandalf
-sendgrid
 streamlit
 serpapi
