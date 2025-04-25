@@ -1,10 +1,17 @@
 import streamlit as st
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
-from langgraph.graph import StateGraph, END
+from langchain_core.messages import HumanMessage, ToolMessage
 from agents.agent import main
 
 # Functions to format and display chat messages
-def display_message(message, is_user=False, is_tool=False):
+def display_message(message: str, is_user: bool = False, is_tool: bool = False) -> None:
+    """
+    Renders a chat message on the Streamlit UI.
+
+    Args:
+        message (str): The message content.
+        is_user (bool, optional): True if the message is from the user. Defaults to False.
+        is_tool (bool, optional): True if the message is from a tool. Defaults to False.
+    """
     if is_user:
         st.markdown(f'<div class="chat-message user-message"><div class="message-content">{message}</div></div>', unsafe_allow_html=True)
     
@@ -14,10 +21,10 @@ def display_message(message, is_user=False, is_tool=False):
 
 
 
-# Page configuration
+# -- Page configuration--
 st.set_page_config(page_title="Travel Agent Chatbot", page_icon=":airplane:", layout="wide")
 
-# Add custom CSS for better styling
+# -- Add custom CSS for better styling --
 st.markdown("""
 <style>
     .chat-message {
@@ -42,11 +49,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state for conversation history
+# -- Initialize session state for conversation history--
 if "conversation_history" not in st.session_state:
     st.session_state.conversation_history = []
 
-# Initialize session state for agent messages
+# --Initialize session state for agent messages --
 if "agent_messages" not in st.session_state:
     st.session_state.agent_messages = []
 
@@ -63,29 +70,21 @@ for message in st.session_state.conversation_history:
         display_message(message["content"])
     
 
-# User input
+# -- Chat user input--
 with st.container():
     user_input = st.chat_input("What's your travel plan?")
     
     if user_input:
-        # Process user input
+    
         # Add user message to conversation history
         st.session_state.conversation_history.append({"type": "user", "content": user_input})
-        
-        # Create a new human message for the agent
         human_message = HumanMessage(content=user_input)
-        
-        # Add to agent context for future conversations
         st.session_state.agent_messages.append(human_message)
         
         # Build the input state for the graph
-        # If using history, uncomment the next line and comment the one after
-        # state = {"messages": st.session_state.agent_messages}
         state = {"messages": st.session_state.agent_messages}
         
-        # Execute the graph
         with st.spinner("Searching..."):
-            
             graph = main()
             result = graph.invoke(state)
 
@@ -96,10 +95,8 @@ with st.container():
             assistant_response = None
             for message in new_messages:
                 if isinstance(message, ToolMessage):
-                    # Tool messages (search results) - add to agent context but not to display
                     st.session_state.agent_messages.append(message)
                 elif not isinstance(message, HumanMessage):
-                    # Assistant messages (ignore human messages to prevent duplication)
                     assistant_response =message
                     st.session_state.agent_messages.append(message)
             # Only add the final assistant response to the conversation history
